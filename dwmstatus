@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# Network interface
+IFACE="wlan0"
+
+# Auto-detect interface if needed
+[ -d "/sys/class/net/$IFACE" ] || IFACE=$(ip route | awk '/default/ {print $5; exit}')
+
+prev_rx=$(cat /sys/class/net/$IFACE/statistics/rx_bytes)
+prev_tx=$(cat /sys/class/net/$IFACE/statistics/tx_bytes)
+
+while :; do
+    # CPU usage
+    cpu=$(top -bn1 | awk '/^CPU:/ {print $4}')
+
+    # RAM usage
+    ram=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
+
+    # Network speeds
+    rx=$(cat /sys/class/net/$IFACE/statistics/rx_bytes)
+    tx=$(cat /sys/class/net/$IFACE/statistics/tx_bytes)
+
+    down=$(( (rx - prev_rx) / 1024 ))
+    up=$(( (tx - prev_tx) / 1024 ))
+
+    prev_rx=$rx
+    prev_tx=$tx
+
+    # Time
+    time=$(date '+%d.%m.%Y %H:%M')
+
+    xsetroot -name "  $cpu |  $ram | ↓ ${down}KB/s ↑ ${up}KB/s | $time"
+
+    sleep 1
+done
